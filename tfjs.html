@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digit Recognition WebApp</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="script.js"></script>
+
+  </head>
+  
+  <body>
+
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.5.2/dist/tf.min.js"></script>
+    <h1>Digit Recognition WebApp</h1>
+    <div id="paint">
+      <h3>Paint a digit here to detect</h3>
+      <canvas id="myCanvas"></canvas>
+      
+    </div>
+    <div id="predicted">
+      Recognized digit
+      <div id="number"></div>
+      <button id="clear">Clear</button>
+    </div>
+
+<script>
+
+  
+var canvas = document.getElementById('myCanvas');
+var context = canvas.getContext('2d');
+
+var computedStyle = getComputedStyle(document.getElementById('paint'));
+canvas.width = parseInt(computedStyle.getPropertyValue('width'));
+canvas.height = parseInt(computedStyle.getPropertyValue('height'));
+
+var mouse = {x: 0, y: 0};
+
+canvas.addEventListener('mousemove', function(e) {
+  mouse.x = e.pageX - this.offsetLeft;
+  mouse.y = e.pageY - this.offsetTop;
+}, false);
+
+
+
+context.lineWidth = 25;
+context.lineJoin = 'round';
+context.lineCap = 'round';
+context.strokeStyle = '#0000FF';
+
+
+
+canvas.addEventListener('mousedown', function(e) {
+  context.moveTo(mouse.x, mouse.y);
+  context.beginPath();
+  canvas.addEventListener('mousemove', onPaint, false);
+}, false);
+
+
+
+canvas.addEventListener('mouseup', function() {
+  $('#number').html('<img id="spinner" src="spinner.gif"/>');
+  canvas.removeEventListener('mousemove', onPaint, false);
+  var img = new Image();
+  img.onload = function() {
+    context.drawImage(img, 0, 0, 28, 28);
+    data = context.getImageData(0, 0, 28, 28).data;
+    var input = [];
+    for(var i = 0; i < data.length; i += 4) {
+      input.push(data[i + 2] / 255);
+    }
+    predict(input);
+  };
+  img.src = canvas.toDataURL('image/png');
+}, false);
+
+
+
+var onPaint = function() {
+  context.lineTo(mouse.x, mouse.y);
+  context.stroke();
+};
+
+
+// Loading the deep learning model
+tf.loadLayersModel('model/model.json').then(function(model) {
+  window.model = model;
+});
+
+
+
+var predict = function(input) {
+  if (window.model) {
+    window.model.predict([tf.tensor(input).reshape([1, 28, 28, 1])]).array().then(function(scores){
+      scores = scores[0];
+      predicted = scores.indexOf(Math.max(...scores));
+      $('#number').html(predicted);
+    });
+  } else {
+    setTimeout(function(){predict(input)}, 50);
+  }
+}
+
+$('#clear').click(function(){
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  $('#number').html('');
+});
+
+</script>
+  <footer>
+    <h5>Digit recognition webapp backed by deep learning model. # Done by <strong>Sundharesan S K</strong> </h5>
+  </footer>
+  </body>
+</html>
